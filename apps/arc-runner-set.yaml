@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-runner-set
+  namespace: argocd
+  annotations:
+    # Wave 1: depends on the controller's CRDs from wave 0.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set
+    targetRevision: 0.12.1  # keep in lockstep with arc-controller
+    helm:
+      releaseName: pi-arc
+      values: |
+        githubConfigUrl: https://github.com/REPLACE_ME_WITH_GITHUB_ORG
+
+        # Pre-created secret in the arc-runners namespace (see notes). The chart
+        # auto-detects GitHub App keys (github_app_id / _installation_id /
+        # _private_key) vs a PAT (github_token) from the secret's contents.
+        githubConfigSecret: arc-github-app
+
+        # Workflows target this with `runs-on: pi-arc`.
+        runnerScaleSetName: pi-arc
+
+        # 0 idle runners (no RAM held until a job arrives); burst capped at 2.
+        minRunners: 0
+        maxRunners: 2
+
+        # dind: privileged runner + Docker sidecar. Runs on k3s/containerd and
+        # needs no RWX volume (kubernetes mode would, which local-path can't do).
+        containerMode:
+          type: dind
+
+        # Controller lives in a different namespace, so point the scale set at it.
+        controllerServiceAccount:
+          namespace: arc-systems
+          name: arc-gha-rs-controller
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-runners
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ CreateNamespace=true ]

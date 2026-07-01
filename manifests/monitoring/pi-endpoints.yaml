@@ -1,0 +1,16 @@
+# Single source of truth for the Pi's observability endpoints, reached directly
+# over the LAN by IP (same subnet, no ingress/TLS). Not a secret — an RFC1918
+# address grants no access on its own — just config kept in one place so re-IP'ing
+# the Pi is a one-line change. Alloy consumes these via envFrom (see apps/alloy.yaml).
+#
+# Pi-side prerequisites:
+#   prometheus: add `--web.enable-remote-write-receiver` and publish `9090:9090`
+#   loki:       publish `3100:3100` (currently bound only to the `mon` bridge)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pi-endpoints
+  namespace: monitoring
+data:
+  PROMETHEUS_URL: "http://REPLACE_ME_WITH_METRICS_HOST:9090/api/v1/write"
+  LOKI_URL: "http://REPLACE_ME_WITH_METRICS_HOST:3100/loki/api/v1/push"

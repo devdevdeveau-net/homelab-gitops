@@ -1,0 +1,21 @@
+# Kills one hello pod every 5 minutes, forever, until this Schedule is deleted.
+# Selector is pinned to namespace `hello` + app=hello so the blast radius can
+# never wander into argocd / vault / external-secrets / monitoring.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: hello-pod-kill
+  namespace: chaos-testing
+spec:
+  schedule: "*/5 * * * *"
+  type: PodChaos
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces:
+        - hello
+      labelSelectors:
+        app: hello

@@ -1,0 +1,16 @@
+# Registers the public ghcr.io OCI Helm registry with Argo CD so the ARC
+# Applications can pull their charts. Most Argo CD versions require OCI repos
+# to be registered with enableOCI=true. No credentials needed (public registry).
+# Apply once, manually, alongside bootstrap/root.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arc-oci-ghcr
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  name: arc-charts
+  type: helm
+  url: ghcr.io/actions/actions-runner-controller-charts
+  enableOCI: "true"

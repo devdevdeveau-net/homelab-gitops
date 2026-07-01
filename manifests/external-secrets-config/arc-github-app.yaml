@@ -1,0 +1,27 @@
+# Migrates the hand-made arc-github-app Secret (GitHub App creds for the ARC
+# runner scale set) to Vault-backed. Multi-key, so dataFrom.extract pulls ALL
+# fields from the Vault path and reproduces them under their original key names
+# (github_app_id / github_app_installation_id / github_app_private_key). Merge =
+# co-manage the existing Secret without owning/clobbering it. Lives in this ESO
+# content app because ARC is Helm-deployed and has no manifests/ dir of its own.
+#
+# Load Vault first (generic; preserves all keys incl. the multiline PEM):
+#   kubectl -n arc-runners get secret arc-github-app -o json \
+#     | jq '.data | map_values(@base64d)' \
+#     | kubectl -n vault exec -i vault-0 -- vault kv put secret/arc/github-app -
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: arc-github-app
+  namespace: arc-runners
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-kv
+    kind: ClusterSecretStore
+  target:
+    name: arc-github-app
+    creationPolicy: Merge
+  dataFrom:
+    - extract:
+        key: arc/github-app

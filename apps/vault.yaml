@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # Public HTTPS Helm repo (like grafana/alloy), so no bootstrap/*-repo.yaml
+    # registration is needed — unlike the ARC OCI registry. Vault Community
+    # Edition: self-hosted, free (BSL permits homelab use), same binary the
+    # chart/bare-metal/Docker all run.
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.33.0   # app v2.0.2
+    helm:
+      values: |
+        server:
+          # Single-node, persistent. NOT dev mode (dev = in-memory, wiped on
+          # every restart and auto-unsealed with a well-known key — useless as a
+          # store). `standalone` uses the file storage backend on one PVC, which
+          # is fine for a homelab on NVMe. The "hard decisions" are deliberately
+          # deferred: HA/raft multi-node, auto-unseal, snapshot-to-cloud backups,
+          # and external-vs-in-cluster placement. See memory/vault-bootstrap.
+          dev:
+            enabled: false
+          standalone:
+            enabled: true
+          dataStorage:
+            enabled: true
+            size: 2Gi
+            storageClass: local-path
+          # No external ingress yet: vault.REPLACE_ME_WITH_DOMAIN is already taken by
+          # Vaultwarden (manifests/vaultwarden), and ESO reaches Vault in-cluster
+          # via the `vault` Service. One-time init/unseal is done over
+          #   kubectl -n vault port-forward svc/vault 8200:8200
+          # authDelegator is on by default, so the Vault SA can call TokenReview
+          # for the Kubernetes auth method ESO uses.
+        ui:
+          enabled: true
+        injector:
+          # ESO delivers secrets as native k8s Secrets, so the Vault Agent
+          # sidecar injector is not needed.
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ CreateNamespace=true ]

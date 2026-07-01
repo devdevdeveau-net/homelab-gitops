@@ -1,0 +1,51 @@
+# Host metrics (CPU, RAM, disk, temp) for the k3s node. Same role as the Pi's
+# bare-metal node_exporter, but run as a DaemonSet so it stays in GitOps: one pod
+# per node, reaching into the host namespaces exactly like the compose service's
+# `pid: host` + `network_mode: host`. Alloy scrapes it in-cluster (apps/alloy.yaml).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: node-exporter
+    spec:
+      hostNetwork: true   # = compose network_mode: host
+      hostPID: true       # = compose pid: host
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:v1.11.1   # pinned to match the Pi
+          args:
+            - "--path.rootfs=/host/root"
+            - "--path.procfs=/host/proc"
+            - "--path.sysfs=/host/sys"
+            # Same intent as the Pi's exclude, plus /host/.+ so the bind-mounts
+            # below aren't double-counted as filesystems.
+            - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+|host/.+)($|/)"
+          ports:
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits:   { memory: 64Mi }
+          volumeMounts:
+            - { name: root, mountPath: /host/root, mountPropagation: HostToContainer, readOnly: true }
+            - { name: proc, mountPath: /host/proc, readOnly: true }
+            - { name: sys,  mountPath: /host/sys,  readOnly: true }
+      tolerations:
+        # Run on every node regardless of taints (control-plane included).
+        - effect: NoSchedule
+          operator: Exists
+      volumes:
+        - { name: root, hostPath: { path: / } }
+        - { name: proc, hostPath: { path: /proc } }
+        - { name: sys,  hostPath: { path: /sys } }

@@ -1,0 +1,26 @@
+# Migrates the hand-made cloudflare-api-token-secret (the CF API token
+# cert-manager uses for the DNS-01 ACME challenge). dataFrom.extract reproduces
+# whatever key name the ClusterIssuer references, so it's not hard-coded here.
+# Merge keeps the existing Secret intact. cert-manager isn't managed by this
+# repo, so the ExternalSecret lives in this ESO content app.
+#
+# Load Vault first:
+#   kubectl -n cert-manager get secret cloudflare-api-token-secret -o json \
+#     | jq '.data | map_values(@base64d)' \
+#     | kubectl -n vault exec -i vault-0 -- vault kv put secret/cert-manager/cloudflare-api-token -
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: cloudflare-api-token-secret
+  namespace: cert-manager
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-kv
+    kind: ClusterSecretStore
+  target:
+    name: cloudflare-api-token-secret
+    creationPolicy: Merge
+  dataFrom:
+    - extract:
+        key: cert-manager/cloudflare-api-token

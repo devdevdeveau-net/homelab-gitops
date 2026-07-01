@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-controller
+  namespace: argocd
+  annotations:
+    # Wave 0: controller + CRDs must exist before the scale set (wave 1) syncs.
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set-controller
+    # Pin to the latest release; controller and scale set MUST be the same version.
+    # https://github.com/actions/actions-runner-controller/releases
+    targetRevision: 0.12.1
+    helm:
+      # Fixes the controller ServiceAccount name to arc-gha-rs-controller,
+      # which the scale set references below.
+      releaseName: arc
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-systems
+  # The API server strips `preserveUnknownFields: false` (deprecated default) from
+  # v1 CRDs, but the chart still sets it, so the field reads `false` in git and
+  # absent on the cluster. Without this, the four ARC CRDs sit permanently
+  # OutOfSync and selfHeal re-syncs ~once a minute forever.
+  ignoreDifferences:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      jsonPointers:
+        - /spec/preserveUnknownFields
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    # ServerSideApply avoids the last-applied-configuration annotation, which
+    # ARC's large CRDs overflow (262144-byte limit) under client-side apply.
+    syncOptions: [ CreateNamespace=true, ServerSideApply=true ]

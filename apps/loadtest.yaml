@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loadtest
+  namespace: argocd
+  annotations:
+    # Wave 1: depends on the TestRun CRD from k6-operator (wave 0).
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:REPLACE_ME_WITH_GITHUB_ORG/homelab-gitops.git
+    targetRevision: main
+    path: manifests/loadtest
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: loadtest
+  syncPolicy:
+    # NOTE: intentionally NO `automated:` block. A TestRun is one-shot — once it
+    # Finishes it just sits there, and the operator spawns Jobs/pods that aren't
+    # in git, so prune+selfHeal would fight the operator's own lifecycle. Sync
+    # this app manually from the Argo UI to fire a run; to re-run, delete the
+    # TestRun (Argo will show it OutOfSync) and sync again.
+    syncOptions: [ CreateNamespace=true ]

@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  annotations:
+    # Wave 0: node-exporter, kube-state-metrics, and the pi-endpoints ConfigMap
+    # must exist before Alloy (wave 1) starts — Alloy scrapes the first two and
+    # reads its Pi endpoints from the ConfigMap via envFrom.
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:REPLACE_ME_WITH_GITHUB_ORG/homelab-gitops.git
+    targetRevision: main
+    path: manifests/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ CreateNamespace=true ]

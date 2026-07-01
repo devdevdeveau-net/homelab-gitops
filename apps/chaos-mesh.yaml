@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: chaos-mesh
+  namespace: argocd
+  annotations:
+    # Wave 0: operator + CRDs must exist before any chaos experiment (wave 1).
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.chaos-mesh.org
+    chart: chaos-mesh
+    # Pin it. https://github.com/chaos-mesh/chaos-mesh/releases  (verify arm64 tag)
+    targetRevision: 2.7.2
+    helm:
+      values: |
+        # CRITICAL for k3s: the chaos-daemon talks to the container runtime, and
+        # the chart defaults to the docker socket. Point it at k3s's containerd
+        # or pod-kill / stress / network chaos silently no-ops.
+        chaosDaemon:
+          runtime: containerd
+          socketPath: /run/k3s/containerd/containerd.sock
+        controllerManager:
+          # Chart default is 3 — pointless leader-election churn + 3x memory on a
+          # Pi. One is plenty for a homelab.
+          replicaCount: 1
+          # Headroom so the manager isn't OOMKilled while syncing informers for
+          # all the chaos CRD kinds on slow arm64.
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+        dashboard:
+          create: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: chaos-mesh
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    # ServerSideApply: the Chaos Mesh CRDs are large and overflow the
+    # last-applied-configuration annotation under client-side apply (same as ARC).
+    syncOptions: [ CreateNamespace=true, ServerSideApply=true ]

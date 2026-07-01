@@ -1,0 +1,30 @@
+# GitHub OAuth App credentials for ArgoCD's bundled Dex (GitHub SSO connector).
+# Dex resolves `$dex.github.clientId` / `$dex.github.clientSecret` from the
+# argocd-secret Secret, so this ExternalSecret merges those two keys into it
+# without owning/clobbering the rest of argocd-secret (which the ArgoCD install
+# manages). ArgoCD itself is installed out-of-band; only its secret material is
+# Vault-backed here, same as the arc-github-app / cloudflare-api-token entries.
+#
+# Create the GitHub OAuth App first (Settings > Developer settings > OAuth Apps):
+#   Homepage URL:               https://argocd.REPLACE_ME_WITH_DOMAIN
+#   Authorization callback URL: https://argocd.REPLACE_ME_WITH_DOMAIN/api/dex/callback
+# then load its credentials into Vault:
+#   kubectl -n vault exec -i vault-0 -- vault kv put secret/argocd/dex \
+#     dex.github.clientId=<client-id> \
+#     dex.github.clientSecret=<client-secret>
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: argocd-dex-github
+  namespace: argocd
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-kv
+    kind: ClusterSecretStore
+  target:
+    name: argocd-secret
+    creationPolicy: Merge
+  dataFrom:
+    - extract:
+        key: argocd/dex

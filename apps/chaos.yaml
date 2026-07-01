@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: chaos
+  namespace: argocd
+  annotations:
+    # Wave 1: depends on the Chaos Mesh CRDs from wave 0.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:REPLACE_ME_WITH_GITHUB_ORG/homelab-gitops.git
+    targetRevision: main
+    path: manifests/chaos
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: chaos-testing
+  syncPolicy:
+    # NO `automated:` block on purpose. A Schedule keeps firing chaos on its cron
+    # once it exists; leaving this manual means chaos only runs after you Sync,
+    # and prune+selfHeal never fights the experiment lifecycle. To STOP the
+    # carnage: delete the Schedule (or this app) — do not just wait it out.
+    syncOptions: [ CreateNamespace=true ]

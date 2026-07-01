@@ -1,0 +1,26 @@
+# Injects 100ms±20ms latency into ALL hello pods for 2 minutes, every 10 minutes.
+# More realistic than pod-kill — you see p95 climb and recover rather than a hard
+# gap. Same pinned selector so the blast radius stays inside namespace hello.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: hello-latency
+  namespace: chaos-testing
+spec:
+  schedule: "*/10 * * * *"
+  type: NetworkChaos
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  networkChaos:
+    action: delay
+    mode: all
+    selector:
+      namespaces:
+        - hello
+      labelSelectors:
+        app: hello
+    delay:
+      latency: "100ms"
+      jitter: "20ms"
+      correlation: "50"
+    duration: "2m"
