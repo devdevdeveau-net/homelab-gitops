@@ -11,7 +11,7 @@ spec:
   source:
     repoURL: ghcr.io/actions/actions-runner-controller-charts
     chart: gha-runner-scale-set
-    targetRevision: 0.12.1  # keep in lockstep with arc-controller
+    targetRevision: 0.15.1  # keep in lockstep with arc-controller
     helm:
       releaseName: pi-arc
       values: |

@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: vaultwarden
-          image: vaultwarden/server:1.35.4
+          image: vaultwarden/server:1.37.5
           env:
             - name: DOMAIN
               value: "https://vault.REPLACE_ME_WITH_DOMAIN"

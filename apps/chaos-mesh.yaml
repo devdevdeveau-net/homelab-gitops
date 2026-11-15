@@ -12,7 +12,7 @@ spec:
     repoURL: https://charts.chaos-mesh.org
     chart: chaos-mesh
     # Pin it. https://github.com/chaos-mesh/chaos-mesh/releases  (verify arm64 tag)
-    targetRevision: 2.7.2
+    targetRevision: 2.8.8
     helm:
       values: |
         # CRITICAL for k3s: the chaos-daemon talks to the container runtime, and

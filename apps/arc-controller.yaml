@@ -13,7 +13,7 @@ spec:
     chart: gha-runner-scale-set-controller
     # Pin to the latest release; controller and scale set MUST be the same version.
     # https://github.com/actions/actions-runner-controller/releases
-    targetRevision: 0.12.1
+    targetRevision: 0.15.1
     helm:
       # Fixes the controller ServiceAccount name to arc-gha-rs-controller,
       # which the scale set references below.
