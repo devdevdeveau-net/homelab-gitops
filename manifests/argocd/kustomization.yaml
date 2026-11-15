@@ -7,4 +7,4 @@ namespace: argocd
 # https://argo-cd.readthedocs.io/en/stable/operator-manual/upgrading/overview/).
 # Patch bumps within a minor are safe to apply directly.
 resources:
-  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.4/manifests/install.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.13/manifests/install.yaml
