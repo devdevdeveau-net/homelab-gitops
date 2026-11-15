@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    # Wave -1: Argo CD upgrades itself before touching anything else, so a
+    # version bump never races a sync of the workloads it manages.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:REPLACE_ME_WITH_GITHUB_ORG/homelab-gitops.git
+    targetRevision: main
+    path: manifests/argocd
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    # prune deliberately OFF: a bad edit here must never delete Argo CD out
+    # from under itself. Obsolete resources left behind by a minor upgrade
+    # get cleaned up manually per that version's upgrade notes.
+    automated: { prune: false, selfHeal: true }
+    syncOptions:
+      # Argo CD's CRDs exceed the client-side-apply annotation size limit
+      # (same reason the README says to install it with --server-side).
+      - ServerSideApply=true
